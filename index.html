@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>寶箱解謎挑戰</title>
+    <style>
+        /* --- 基礎設定 --- */
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #2c3e50; /* */
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden; /* 防止探照燈拖曳時畫面捲動 */
+        }
+
+        h2 { margin-bottom: 10px; text-align: center; z-index: 2; }
+        p { text-align: center; margin-bottom: 20px; color: #ecf0f1; z-index: 2; }
+
+        /* --- 登入區塊 --- */
+        #login-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px; /* */
+            border-radius: 15px;
+            text-align: center;
+            width: 100%;
+            max-width: 350px;
+            z-index: 5;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 18px; /* */
+            width: 80%;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 18px; /* */
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:active { transform: scale(0.95); }
+
+        /* --- 遊戲主區塊 --- */
+        #game-section { display: none; width: 100%; max-width: 400px; flex-direction: column; align-items: center; position: relative; }
+
+        /* ============================
+           TYPE A: 拼圖樣式 (原本的)
+           ============================ */
+        #puzzle-container {
+            display: none; /* 預設隱藏 */
+            grid-template-columns: repeat(3, 1fr); /* */
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #34495e;
+            border: 5px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .puzzle-piece {
+            background-size: 300% 300%; /* */
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .selected {
+            border: 2px solid #e74c3c;
+            z-index: 10;
+            transform: scale(0.95);
+            box-shadow: 0 0 10px #e74c3c;
+        }
+
+        /* ============================
+           TYPE B: 探照燈文字樣式 (新增的)
+           ============================ */
+        #flashlight-container {
+            display: none; /* 預設隱藏 */
+            width: 100%;
+            height: 350px;
+            background-color: #000;
+            border: 5px solid #bdc3c7;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            touch-action: none; /* 禁止手機滑動頁面，專心玩遊戲 */
+            cursor: crosshair;
+        }
+
+        /* 隱藏的文字層 */
+        #hidden-text {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            font-size: 40px;
+            line-height: 1.6;
+            font-weight: bold;
+            color: #f1c40f; /* 金色文字 */
+            text-align: center;
+            background: #222; /* 底色 */
+            user-select: none;
+        }
+
+        /* 遮罩層 (黑暗層) */
+        #darkness-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            /* 這裡的 radial-gradient 會由 JS 動態控制位置 */
+            background: radial-gradient(circle 120px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.98) 20%);
+            pointer-events: none; /* 讓點擊事件穿透去觸發移動偵測 */
+        }
+
+        /* 提示手指圖示 */
+        #hand-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 24px;
+            opacity: 0.7;
+            animation: float 2s infinite;
+            pointer-events: none;
+            color: white;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* --- 訊息區 --- */
+        #success-message {
+            display: none;
+            margin-top: 20px; /* */
+            padding: 15px;
+            background-color: #27ae60;
+            border-radius: 10px;
+            text-align: center;
+            width: 100%;
+        }
+
+        #error-msg { color: #e74c3c; margin-top: 10px; display: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="login-section">
+        <h2>寶箱提示</h2>
+        <p>請輸入密碼開啟對應提示</p>
+        <input type="text" id="password-input" placeholder="請輸入四位數字" inputmode="numeric">
+        <br>
+        <button onclick="checkPassword()">開啟</button>
+        <div id="error-msg">密碼錯誤，請再試一次</div>
+    </div>
+
+    <div id="game-section">
+        <h2 id="level-title">關卡標題</h2>
+        <p id="level-desc">說明文字</p>
+        
+        <div id="puzzle-container"></div>
+
+        <div id="flashlight-container">
+            <div id="hidden-text">這裡會顯示提示文字</div>
+            <div id="darkness-overlay"></div>
+                    </div>
+
+        <div id="success-message">
+            <h3 id="success-title">🎉 恭喜通關！</h3>
+            <button onclick="location.reload()">返回首頁</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ★ 關卡設定區 (包含拼圖和探照燈) ★
+        // ==========================================
+        const levels = {
+            "2026": {
+                type: "puzzle", 
+                title: "寶箱提示(一)",
+                desc: "點擊兩塊拼圖可交換位置",
+                // 已幫你修正為直連網址，確保圖片顯示正常 
+                content: "https://i.postimg.cc/YCYQSK17/bao-xiang01.png" 
+            },
+            "2552": {
+                type: "puzzle",
+                title: "寶箱提示(一)",
+                desc: "點擊兩塊拼圖可交換位置",
+                content: "https://i.postimg.cc/W1xjXCKP/bao-xiang02.png" 
+            },
+            "1111": {
+                type: "flashlight",
+                title: "密碼提示(二)",
+                desc: "試著滑動手指尋找提示",
+                content: "寶箱藏在<br>一樓"
+            },
+            "2222": {
+                type: "flashlight",
+                title: "密碼提示(二)",
+                desc: "試著滑動手指尋找提示",
+                content: "寶箱放在<br>很高的地方"
+            }
+        };
+        // ==========================================
+
+        let currentLevel = null;
+        let puzzlePieces = [];
+        let selectedPieceIndex = null;
+
+        // 1. 檢查密碼
+        function checkPassword() {
+            const input = document.getElementById('password-input').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            
+            if (levels[input]) {
+                currentLevel = levels[input];
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('game-section').style.display = 'flex';
+                document.getElementById('level-title').innerText = currentLevel.title;
+                document.getElementById('level-desc').innerText = currentLevel.desc;
+                document.getElementById('error-msg').style.display = 'none';
+                
+                // 根據類型啟動不同遊戲
+                if (currentLevel.type === 'puzzle') {
+                    startPuzzleGame(currentLevel.content);
+                } else if (currentLevel.type === 'flashlight') {
+                    startFlashlightGame(currentLevel.content);
+                }
+            } else {
+                errorMsg.style.display = 'block';
+                document.getElementById('password-input').value = '';
+            }
+        }
+
+        // ============================
+        //  A. 拼圖邏輯
+        // ============================
+        function startPuzzleGame(imgUrl) {
+            document.getElementById('puzzle-container').style.display = 'grid';
+            document.getElementById('flashlight-container').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+            
+            const container = document.getElementById('puzzle-container');
+            container.innerHTML = '';
+            puzzlePieces = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            
+            do {
+                puzzlePieces.sort(() => Math.random() - 0.5);
+            } while (checkPuzzleWin(true)); 
+
+            puzzlePieces.forEach((imgIndex, gridIndex) => {
+                const piece = document.createElement('div');
+                piece.classList.add('puzzle-piece');
+                piece.dataset.index = gridIndex;
+                
+                piece.style.backgroundImage = `url('${imgUrl}')`;
+                
+                const row = Math.floor(imgIndex / 3);
+                const col = imgIndex % 3;
+                piece.style.backgroundPosition = `${col * 50}% ${row * 50}%`; 
+
+                piece.onclick = () => onPuzzleClick(gridIndex);
+                container.appendChild(piece);
+            });
+        }
+
+        function onPuzzleClick(index) {
+            if(document.getElementById('success-message').style.display === 'block') return;
+            const domPieces = document.querySelectorAll('.puzzle-piece');
+
+            if (selectedPieceIndex === null) {
+                selectedPieceIndex = index;
+                domPieces[index].classList.add('selected');
+            } else {
+                if (selectedPieceIndex !== index) {
+                    [puzzlePieces[selectedPieceIndex], puzzlePieces[index]] = [puzzlePieces[index], puzzlePieces[selectedPieceIndex]];
+                    const bg1 = domPieces[selectedPieceIndex].style.backgroundPosition;
+                    const bg2 = domPieces[index].style.backgroundPosition;
+                    domPieces[selectedPieceIndex].style.backgroundPosition = bg2;
+                    domPieces[index].style.backgroundPosition = bg1;
+                }
+                domPieces[selectedPieceIndex].classList.remove('selected');
+                selectedPieceIndex = null;
+                checkPuzzleWin();
+            }
+        }
+
+        function checkPuzzleWin(silent = false) {
+            for (let i = 0; i < 9; i++) {
+                if (puzzlePieces[i] !== i) return false;
+            }
+            if (!silent) {
+                setTimeout(() => {
+                    document.getElementById('success-message').style.display = 'block';
+                    document.getElementById('success-title').innerText = "🎉 圖片拼湊完成！";
+                }, 300);
+            }
+            return true;
+        }
+
+        // ============================
+        //  B. 探照燈邏輯 (新增)
+        // ============================
+        function startFlashlightGame(text) {
+            document.getElementById('puzzle-container').style.display = 'none';
+            document.getElementById('flashlight-container').style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+            
+            document.getElementById('hidden-text').innerHTML = text;
+
+            const container = document.getElementById('flashlight-container');
+            container.addEventListener('mousemove', moveLight);
+            container.addEventListener('touchmove', moveLight, { passive: false });
+            
+            
+        }
+
+        function moveLight(e) {
+            e.preventDefault(); 
+            const container = document.getElementById('flashlight-container');
+            const rect = container.getBoundingClientRect();
+            const overlay = document.getElementById('darkness-overlay');
+
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            overlay.style.setProperty('--x', x + 'px');
+            overlay.style.setProperty('--y', y + 'px');
+        }
+
+    </script>
+</body>
+</html>
