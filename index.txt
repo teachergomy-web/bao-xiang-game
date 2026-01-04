@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寶箱解謎拼圖</title>
+    <style>
+        /* --- 基礎設定 --- */
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h2 { margin-bottom: 10px; text-align: center; }
+        p { text-align: center; margin-bottom: 20px; color: #ecf0f1; }
+
+        /* --- 登入區塊 --- */
+        #login-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 18px;
+            width: 80%;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 25px;
+            font-size: 18px;
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:active { transform: scale(0.95); }
+
+        /* --- 遊戲區塊 (預設隱藏) --- */
+        #game-section { display: none; width: 100%; max-width: 400px; flex-direction: column; align-items: center; }
+
+        /* --- 拼圖容器 --- */
+        #puzzle-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3列 */
+            grid-template-rows: repeat(3, 1fr);    /* 3行 */
+            gap: 2px;
+            width: 100%;
+            aspect-ratio: 1 / 1; /* 保持正方形 */
+            background-color: #34495e;
+            border: 5px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* --- 拼圖塊 --- */
+        .puzzle-piece {
+            background-size: 300% 300%; /* 因為是3x3，所以放大3倍 */
+            cursor: pointer;
+            transition: transform 0.2s, border 0.2s;
+            position: relative;
+        }
+
+        /* 選中時的特效 */
+        .selected {
+            border: 2px solid #e74c3c;
+            z-index: 10;
+            transform: scale(0.95);
+            box-shadow: 0 0 10px #e74c3c;
+        }
+
+        /* --- 過關訊息 --- */
+        #success-message {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #27ae60;
+            border-radius: 10px;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* 錯誤訊息 */
+        #error-msg { color: #e74c3c; margin-top: 10px; display: none; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-section">
+        <h2>寶箱提示</h2>
+        <p>輸入密碼以開啟寶箱提示小遊戲</p>
+        <input type="text" id="password-input" placeholder="輸入四位數字" inputmode="numeric">
+        <br>
+        <button onclick="checkPassword()">開啟寶箱</button>
+        <div id="error-msg">密碼錯誤，請再試一次</div>
+    </div>
+
+    <div id="game-section">
+        <h2 id="level-title">拼圖挑戰</h2>
+        <p>點擊兩塊拼圖可交換位置</p>
+        
+        <div id="puzzle-container">
+            </div>
+
+        <div id="success-message">
+            <h3>🎉 恭喜通關！ 🎉</h3>
+            <p>你已成功還原圖片！</p>
+            <button onclick="location.reload()">返回首頁</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ★ 設定區：請在此處更換你的圖片連結 ★
+        // ==========================================
+        const levels = {
+            "2026": {
+                title: "寶箱提示(一)",
+                // 建議使用正方形圖片 (1:1)
+                imageUrl: "https://drive.google.com/file/d/1wXoGX2gKv9flVPOvkSLjNaFyqAwT_GhW/view?usp=sharing" 
+            },
+            "2552": {
+                title: "寶箱提示(二)",
+                // 這是第二張圖
+                imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop" 
+            }
+        };
+        // ==========================================
+
+        let currentImage = "";
+        let pieces = []; // 儲存目前的排列順序 [0, 1, 2...]
+        let selectedPieceIndex = null; // 目前選中的拼圖索引
+
+        // 1. 檢查密碼
+        function checkPassword() {
+            const input = document.getElementById('password-input').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            
+            if (levels[input]) {
+                // 密碼正確
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('game-section').style.display = 'flex';
+                document.getElementById('level-title').innerText = levels[input].title;
+                
+                currentImage = levels[input].imageUrl;
+                startGame();
+            } else {
+                // 密碼錯誤
+                errorMsg.style.display = 'block';
+                document.getElementById('password-input').value = '';
+            }
+        }
+
+        // 2. 開始遊戲初始化
+        function startGame() {
+            const container = document.getElementById('puzzle-container');
+            container.innerHTML = '';
+            pieces = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            
+            // 打亂順序 (確保不會剛好是完成狀態)
+            do {
+                pieces.sort(() => Math.random() - 0.5);
+            } while (checkIfWin(true)); // 如果剛好排好，就重洗
+
+            // 建立 9 個 div
+            pieces.forEach((imgIndex, gridIndex) => {
+                const piece = document.createElement('div');
+                piece.classList.add('puzzle-piece');
+                piece.dataset.index = gridIndex; // 這是它目前在格子裡的位置 (0-8)
+                
+                // 設定背景圖
+                piece.style.backgroundImage = `url('${currentImage}')`;
+                
+                // 計算背景位置 (這是關鍵：根據 imgIndex 決定顯示圖片的哪一塊)
+                // 0 1 2
+                // 3 4 5
+                // 6 7 8
+                const row = Math.floor(imgIndex / 3);
+                const col = imgIndex % 3;
+                piece.style.backgroundPosition = `${col * 50}% ${row * 50}%`; 
+                // 50% 是因為背景設為 300%，位置位移分別是 0%, 50%, 100%
+
+                // 點擊事件
+                piece.onclick = () => onPieceClick(gridIndex);
+                container.appendChild(piece);
+            });
+        }
+
+        // 3. 點擊處理 (交換邏輯)
+        function onPieceClick(index) {
+            // 如果已經過關，禁止操作
+            if(document.getElementById('success-message').style.display === 'block') return;
+
+            const domPieces = document.querySelectorAll('.puzzle-piece');
+
+            if (selectedPieceIndex === null) {
+                // 第一次點擊：選取
+                selectedPieceIndex = index;
+                domPieces[index].classList.add('selected');
+            } else {
+                // 第二次點擊：交換
+                if (selectedPieceIndex !== index) {
+                    swapPieces(selectedPieceIndex, index);
+                }
+                // 取消選取樣式
+                domPieces[selectedPieceIndex].classList.remove('selected');
+                selectedPieceIndex = null;
+            }
+        }
+
+        // 4. 交換資料與畫面
+        function swapPieces(idx1, idx2) {
+            // 交換陣列資料
+            [pieces[idx1], pieces[idx2]] = [pieces[idx2], pieces[idx1]];
+            
+            // 重新渲染畫面 (簡單暴力法：重畫 DOM)
+            // 為了保留動畫效果，這裡我們交換 DOM 的 backgroundPosition
+            const domPieces = document.querySelectorAll('.puzzle-piece');
+            const bg1 = domPieces[idx1].style.backgroundPosition;
+            const bg2 = domPieces[idx2].style.backgroundPosition;
+            
+            domPieces[idx1].style.backgroundPosition = bg2;
+            domPieces[idx2].style.backgroundPosition = bg1;
+
+            // 檢查是否過關
+            checkIfWin();
+        }
+
+        // 5. 檢查勝利
+        function checkIfWin(silent = false) {
+            // 檢查 pieces 陣列是否等於 [0, 1, 2, 3, 4, 5, 6, 7, 8]
+            // 注意：因為上面 swapPieces 實際上沒有重繪 DOM 順序，而是交換樣式，
+            // 這裡我們需要檢查每個格子的 backgroundPosition 是否對應正確。
+            // 為了簡化邏輯，我們改為檢查資料層的 pieces
+            
+            // 修正：上面的 swapPieces 交換了 pieces 陣列，所以直接比對 pieces
+            for (let i = 0; i < 9; i++) {
+                if (pieces[i] !== i) return false;
+            }
+
+            if (!silent) {
+                setTimeout(() => {
+                    document.getElementById('success-message').style.display = 'block';
+                }, 300);
+            }
+            return true;
+        }
+    </script>
+</body>
+</html>
