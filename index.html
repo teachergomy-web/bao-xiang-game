@@ -114,7 +114,7 @@
             justify-content: center;
             padding: 20px;
             box-sizing: border-box;
-            font-size: 80px;
+            font-size: 40px;
             line-height: 1.6;
             font-weight: bold;
             color: #f1c40f; /* 金色文字 */
@@ -131,18 +131,7 @@
             background: radial-gradient(circle 180px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.98) 20%);
             pointer-events: none; /* 讓點擊事件穿透去觸發移動偵測 */
         }
-/* ★ 修改 2：手電筒圖示樣式 */
-        #flashlight-cursor {
-            position: absolute;
-            font-size: 50px; /* 圖示大小 */
-            pointer-events: none; /* 讓點擊穿透，不會擋住遊戲 */
-            z-index: 20; /* 放在最上層 */
-            transform: translate(-20%, -20%); /* 稍微調整位置讓它對準光圈中心 */
-            left: 50%; /* 預設位置 */
-            top: 50%;
-            transition: opacity 0.2s; /* 淡入淡出 */
-            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); /* 加一點發光效果 */
-        }
+
         /* 提示手指圖示 */
         #hand-hint {
             position: absolute;
@@ -207,26 +196,26 @@
         // ★ 關卡設定區 (包含拼圖和探照燈) ★
         // ==========================================
         const levels = {
-            "2026": {
+            "0000": {
                 type: "puzzle", 
                 title: "寶箱提示(一)",
                 desc: "點擊兩塊拼圖可交換位置",
                 // 已幫你修正為直連網址，確保圖片顯示正常 
                 content: "https://i.postimg.cc/YCYQSK17/bao-xiang01.png" 
             },
-            "2552": {
+            "1111": {
                 type: "puzzle",
                 title: "寶箱提示(一)",
                 desc: "點擊兩塊拼圖可交換位置",
                 content: "https://i.postimg.cc/W1xjXCKP/bao-xiang02.png" 
             },
-            "1111": {
+            "2222": {
                 type: "flashlight",
                 title: "密碼提示(二)",
                 desc: "試著滑動手指尋找提示",
                 content: "寶箱藏在<br>一樓"
             },
-            "2222": {
+            "3333": {
                 type: "flashlight",
                 title: "密碼提示(二)",
                 desc: "試著滑動手指尋找提示",
@@ -355,8 +344,8 @@
 
             let clientX, clientY;
             if (e.touches) {
-                clientX = e.touches[0].clientX - 50; 
-                clientY = e.touches[0].clientY - 50;
+                clientX = e.touches[0].clientX - 70; 
+                clientY = e.touches[0].clientY - 70;
             } else {
                 clientX = e.clientX;
                 clientY = e.clientY;
