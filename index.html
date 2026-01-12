@@ -8,7 +8,7 @@
         /* --- 基礎設定 --- */
         body {
             font-family: "Microsoft JhengHei", sans-serif;
-            background-color: #2c3e50; /* */
+            background-color: #2c3e50;
             color: white;
             display: flex;
             flex-direction: column;
@@ -18,7 +18,7 @@
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
-            overflow: hidden; /* 防止探照燈拖曳時畫面捲動 */
+            overflow: hidden;
         }
 
         h2 { margin-bottom: 10px; text-align: center; z-index: 2; }
@@ -27,7 +27,7 @@
         /* --- 登入區塊 --- */
         #login-section {
             background: rgba(255, 255, 255, 0.1);
-            padding: 30px; /* */
+            padding: 30px;
             border-radius: 15px;
             text-align: center;
             width: 100%;
@@ -37,7 +37,7 @@
 
         input[type="text"] {
             padding: 10px;
-            font-size: 18px; /* */
+            font-size: 18px;
             width: 80%;
             border-radius: 5px;
             border: none;
@@ -47,7 +47,7 @@
 
         button {
             padding: 10px 25px;
-            font-size: 18px; /* */
+            font-size: 18px;
             background-color: #e67e22;
             color: white;
             border: none;
@@ -61,12 +61,10 @@
         /* --- 遊戲主區塊 --- */
         #game-section { display: none; width: 100%; max-width: 400px; flex-direction: column; align-items: center; position: relative; }
 
-        /* ============================
-           TYPE A: 拼圖樣式 (原本的)
-           ============================ */
+        /* A. 拼圖樣式 */
         #puzzle-container {
-            display: none; /* 預設隱藏 */
-            grid-template-columns: repeat(3, 1fr); /* */
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
             gap: 2px;
             width: 100%;
@@ -77,7 +75,7 @@
         }
 
         .puzzle-piece {
-            background-size: 300% 300%; /* */
+            background-size: 300% 300%;
             cursor: pointer;
             transition: transform 0.2s;
         }
@@ -89,11 +87,9 @@
             box-shadow: 0 0 10px #e74c3c;
         }
 
-        /* ============================
-           TYPE B: 探照燈文字樣式 (新增的)
-           ============================ */
+        /* B. 探照燈樣式 */
         #flashlight-container {
-            display: none; /* 預設隱藏 */
+            display: none;
             width: 100%;
             height: 350px;
             background-color: #000;
@@ -101,11 +97,10 @@
             border-radius: 10px;
             position: relative;
             overflow: hidden;
-            touch-action: none; /* 禁止手機滑動頁面，專心玩遊戲 */
+            touch-action: none;
             cursor: crosshair;
         }
 
-        /* 隱藏的文字層 */
         #hidden-text {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -117,47 +112,100 @@
             font-size: 70px;
             line-height: 1.6;
             font-weight: bold;
-            color: #f1c40f; /* 金色文字 */
+            color: #f1c40f;
             text-align: center;
-            background: #222; /* 底色 */
+            background: #222;
             user-select: none;
         }
 
-        /* 遮罩層 (黑暗層) */
         #darkness-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            /* 這裡的 radial-gradient 會由 JS 動態控制位置 */
             background: radial-gradient(circle 180px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.98) 20%);
-            pointer-events: none; /* 讓點擊事件穿透去觸發移動偵測 */
-        }
-
-        /* 提示手指圖示 */
-        #hand-hint {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            font-size: 24px;
-            opacity: 0.7;
-            animation: float 2s infinite;
             pointer-events: none;
+        }
+
+        /* C. 翻牌樣式 */
+        #memory-container {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 100%;
+            perspective: 1000px;
+        }
+
+        .memory-card {
+            background-color: transparent;
+            aspect-ratio: 2 / 3;
+            perspective: 1000px;
+            cursor: pointer;
+            position: relative;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+
+        .memory-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .memory-card.flip .memory-card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .memory-front, .memory-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 2px solid #fff;
+            font-size: 32px;
+        }
+
+        .memory-front {
+            background-color: #34495e;
             color: white;
+            font-size: 24px;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        .memory-back {
+            background-color: #ecf0f1;
+            color: black;
+            transform: rotateY(180deg);
+        }
+        
+        /* 配對成功後隱藏 */
+        .memory-card.matched {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
         }
 
-        /* --- 訊息區 --- */
         #success-message {
             display: none;
-            margin-top: 20px; /* */
+            margin-top: 20px;
             padding: 15px;
             background-color: #27ae60;
             border-radius: 10px;
             text-align: center;
             width: 100%;
+        }
+        
+        /* 過關文字加大一點比較明顯 */
+        #success-content {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffeaa7;
+            margin: 10px 0;
         }
 
         #error-msg { color: #e74c3c; margin-top: 10px; display: none; font-weight: bold; }
@@ -181,54 +229,69 @@
         <div id="puzzle-container"></div>
 
         <div id="flashlight-container">
-            <div id="hidden-text">這裡會顯示提示文字</div>
+            <div id="hidden-text"></div>
             <div id="darkness-overlay"></div>
-                    </div>
+        </div>
+
+        <div id="memory-container"></div>
 
         <div id="success-message">
             <h3 id="success-title">🎉 恭喜通關！</h3>
+            <p id="success-content"></p>
             <button onclick="location.reload()">返回首頁</button>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // ★ 關卡設定區 (包含拼圖和探照燈) ★
+        // ★ 關卡設定區 ★
         // ==========================================
         const levels = {
-            "0000": {
+            "4827": {
                 type: "puzzle", 
                 title: "寶箱提示(一)",
                 desc: "點擊兩塊拼圖可交換位置",
-                // 已幫你修正為直連網址，確保圖片顯示正常 
                 content: "https://i.postimg.cc/YCYQSK17/bao-xiang01.png" 
             },
-            "1111": {
+            "9063": {
                 type: "puzzle",
                 title: "寶箱提示(一)",
                 desc: "點擊兩塊拼圖可交換位置",
                 content: "https://i.postimg.cc/W1xjXCKP/bao-xiang02.png" 
             },
-            "2222": {
+            "1759": {
                 type: "flashlight",
-                title: "密碼提示(二)",
+                title: "密碼提示(三)",
                 desc: "試著滑動手指尋找提示",
                 content: "寶箱藏在<br>一樓"
             },
-            "3333": {
+            "6384": {
                 type: "flashlight",
-                title: "密碼提示(二)",
+                title: "密碼提示(三)",
                 desc: "試著滑動手指尋找提示",
-                content: "寶箱放在<br>很高的地方"
+                content: "寶箱藏在<br>三樓"
+            },
+            "2941": {
+                type: "memory", 
+                title: "寶箱提示(二)",
+                desc: "翻開卡片，找出相同的圖案",
+                content: "🍎,🍌,🍇,🍉",
+                // ★ 這裡設定翻牌過關後的提示文字
+                clue: "寶箱放在很冷的地方" 
             }
         };
-        // ==========================================
 
         let currentLevel = null;
+        
         let puzzlePieces = [];
         let selectedPieceIndex = null;
+        
+        let memoryCards = [];
+        let hasFlippedCard = false;
+        let lockBoard = false;
+        let firstCard, secondCard;
+        let matchedPairs = 0;
 
-        // 1. 檢查密碼
         function checkPassword() {
             const input = document.getElementById('password-input').value.trim();
             const errorMsg = document.getElementById('error-msg');
@@ -241,11 +304,17 @@
                 document.getElementById('level-desc').innerText = currentLevel.desc;
                 document.getElementById('error-msg').style.display = 'none';
                 
-                // 根據類型啟動不同遊戲
+                document.getElementById('puzzle-container').style.display = 'none';
+                document.getElementById('flashlight-container').style.display = 'none';
+                document.getElementById('memory-container').style.display = 'none';
+                document.getElementById('success-message').style.display = 'none';
+
                 if (currentLevel.type === 'puzzle') {
                     startPuzzleGame(currentLevel.content);
                 } else if (currentLevel.type === 'flashlight') {
                     startFlashlightGame(currentLevel.content);
+                } else if (currentLevel.type === 'memory') {
+                    startMemoryGame(currentLevel.content);
                 }
             } else {
                 errorMsg.style.display = 'block';
@@ -253,13 +322,9 @@
             }
         }
 
-        // ============================
-        //  A. 拼圖邏輯
-        // ============================
+        // --- A. 拼圖邏輯 ---
         function startPuzzleGame(imgUrl) {
             document.getElementById('puzzle-container').style.display = 'grid';
-            document.getElementById('flashlight-container').style.display = 'none';
-            document.getElementById('success-message').style.display = 'none';
             
             const container = document.getElementById('puzzle-container');
             container.innerHTML = '';
@@ -273,7 +338,6 @@
                 const piece = document.createElement('div');
                 piece.classList.add('puzzle-piece');
                 piece.dataset.index = gridIndex;
-                
                 piece.style.backgroundImage = `url('${imgUrl}')`;
                 
                 const row = Math.floor(imgIndex / 3);
@@ -314,50 +378,139 @@
                 setTimeout(() => {
                     document.getElementById('success-message').style.display = 'block';
                     document.getElementById('success-title').innerText = "🎉 圖片拼湊完成！";
+                    document.getElementById('success-content').innerText = "線索就在圖片中";
                 }, 300);
             }
             return true;
         }
 
-        // ============================
-        //  B. 探照燈邏輯 (新增)
-        // ============================
+        // --- B. 探照燈邏輯 ---
         function startFlashlightGame(text) {
-            document.getElementById('puzzle-container').style.display = 'none';
             document.getElementById('flashlight-container').style.display = 'block';
-            document.getElementById('success-message').style.display = 'none';
-            
             document.getElementById('hidden-text').innerHTML = text;
-
             const container = document.getElementById('flashlight-container');
             container.addEventListener('mousemove', moveLight);
             container.addEventListener('touchmove', moveLight, { passive: false });
-            
-            
         }
 
         function moveLight(e) {
-            e.preventDefault(); 
+            e.preventDefault();
             const container = document.getElementById('flashlight-container');
             const rect = container.getBoundingClientRect();
             const overlay = document.getElementById('darkness-overlay');
-
             let clientX, clientY;
             if (e.touches) {
-                clientX = e.touches[0].clientX - 40; 
+                clientX = e.touches[0].clientX - 40;
                 clientY = e.touches[0].clientY - 40;
             } else {
                 clientX = e.clientX;
                 clientY = e.clientY;
             }
-
             const x = clientX - rect.left;
             const y = clientY - rect.top;
-
             overlay.style.setProperty('--x', x + 'px');
             overlay.style.setProperty('--y', y + 'px');
         }
 
+        // --- C. 翻牌遊戲邏輯 ---
+        function startMemoryGame(emojisStr) {
+            const container = document.getElementById('memory-container');
+            container.style.display = 'grid';
+            container.innerHTML = ''; 
+            
+            const baseEmojis = emojisStr.split(',');
+            const gameEmojis = [...baseEmojis, ...baseEmojis]; 
+            
+            gameEmojis.sort(() => 0.5 - Math.random());
+            
+            hasFlippedCard = false;
+            lockBoard = true; // 預覽時鎖定
+            firstCard = null;
+            secondCard = null;
+            matchedPairs = 0;
+
+            gameEmojis.forEach(emoji => {
+                const card = document.createElement('div');
+                card.classList.add('memory-card');
+                card.dataset.emoji = emoji; 
+                card.innerHTML = `
+                    <div class="memory-card-inner">
+                        <div class="memory-front">?</div>
+                        <div class="memory-back">${emoji}</div>
+                    </div>
+                `;
+                card.addEventListener('click', flipCard);
+                container.appendChild(card);
+            });
+
+            // 預覽功能: 翻開2秒後蓋上
+            const allCards = document.querySelectorAll('.memory-card');
+            setTimeout(() => {
+                allCards.forEach(card => card.classList.add('flip'));
+            }, 100);
+
+            setTimeout(() => {
+                allCards.forEach(card => card.classList.remove('flip'));
+                lockBoard = false; // 解鎖開始遊戲
+            }, 2100);
+        }
+
+        function flipCard() {
+            if (lockBoard) return;
+            if (this === firstCard) return;
+
+            this.classList.add('flip');
+            if (!hasFlippedCard) {
+                hasFlippedCard = true;
+                firstCard = this;
+                return;
+            }
+
+            secondCard = this;
+            checkForMatch();
+        }
+
+        function checkForMatch() {
+            let isMatch = firstCard.dataset.emoji === secondCard.dataset.emoji;
+            isMatch ? disableCards() : unflipCards();
+        }
+
+        function disableCards() {
+            firstCard.removeEventListener('click', flipCard);
+            secondCard.removeEventListener('click', flipCard);
+            
+            // 配對成功後隱藏
+            setTimeout(() => {
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+                resetBoard();
+            }, 500);
+
+            matchedPairs++; 
+            if (matchedPairs === 4) {
+                setTimeout(() => {
+                    document.getElementById('success-message').style.display = 'block';
+                    document.getElementById('success-title').innerText = "🎉 配對成功！";
+                    // ★ 顯示過關提示 (如果有設定 clue 就顯示 clue，沒有則顯示預設文字)
+                    const clueText = currentLevel.clue ? `線索：${currentLevel.clue}` : "你真厲害！";
+                    document.getElementById('success-content').innerText = clueText;
+                }, 1000);
+            }
+        }
+
+        function unflipCards() {
+            lockBoard = true;
+            setTimeout(() => {
+                firstCard.classList.remove('flip');
+                secondCard.classList.remove('flip');
+                resetBoard();
+            }, 1000);
+        }
+
+        function resetBoard() {
+            [hasFlippedCard, lockBoard] = [false, false];
+            [firstCard, secondCard] = [null, null];
+        }
     </script>
 </body>
 </html>
